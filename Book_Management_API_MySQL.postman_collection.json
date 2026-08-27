@@ -1,0 +1,64 @@
+{
+  "info": {
+    "_postman_id": "f7aec567-df67-469b-9e2d-mysql-books-api",
+    "name": "Book Management API - Raw MySQL",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "base_url", "value": "http://127.0.0.1:8000"},
+    {"key": "admin_token", "value": ""},
+    {"key": "book_id", "value": "1"}
+  ],
+  "item": [
+    {
+      "name": "01 Register Admin",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\",\n  \"role\": \"admin\"\n}", "options": {"raw": {"language": "json"}}},
+        "url": "{{base_url}}/auth/register"
+      }
+    },
+    {
+      "name": "02 Login Admin",
+      "event": [{"listen": "test", "script": {"exec": ["const data = pm.response.json();", "pm.collectionVariables.set('admin_token', data.access_token);"]}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+        "body": {"mode": "urlencoded", "urlencoded": [{"key": "username", "value": "admin", "type": "text"}, {"key": "password", "value": "admin123", "type": "text"}]},
+        "url": "{{base_url}}/auth/login"
+      }
+    },
+    {
+      "name": "03 Create Book",
+      "event": [{"listen": "test", "script": {"exec": ["const data = pm.response.json();", "pm.collectionVariables.set('book_id', data.id);"]}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{admin_token}}"}],
+        "body": {"mode": "raw", "raw": "{\n  \"title\": \"Clean Code\",\n  \"author\": \"Robert C. Martin\",\n  \"published_year\": 2008\n}", "options": {"raw": {"language": "json"}}},
+        "url": "{{base_url}}/books"
+      }
+    },
+    {"name": "04 Get Books", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}], "url": "{{base_url}}/books"}},
+    {"name": "05 Get One Book", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}], "url": "{{base_url}}/books/{{book_id}}"}},
+    {
+      "name": "06 PUT Book",
+      "request": {
+        "method": "PUT",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{admin_token}}"}],
+        "body": {"mode": "raw", "raw": "{\n  \"title\": \"Clean Code Updated\",\n  \"author\": \"Robert C. Martin\",\n  \"published_year\": 2008\n}", "options": {"raw": {"language": "json"}}},
+        "url": "{{base_url}}/books/{{book_id}}"
+      }
+    },
+    {
+      "name": "07 PATCH Book",
+      "request": {
+        "method": "PATCH",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{admin_token}}"}],
+        "body": {"mode": "raw", "raw": "{\n  \"title\": \"Patched title\"\n}", "options": {"raw": {"language": "json"}}},
+        "url": "{{base_url}}/books/{{book_id}}"
+      }
+    },
+    {"name": "08 Delete Book", "request": {"method": "DELETE", "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}], "url": "{{base_url}}/books/{{book_id}}"}}
+  ]
+}

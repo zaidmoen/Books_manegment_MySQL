@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: b282dce7-e885-4a5b-9c2f-12969e5056cf
+
+localResources:
+  collections:
+    - ../Book_Management_API_MySQL.postman_collection.json
