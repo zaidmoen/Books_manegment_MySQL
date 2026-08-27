@@ -1,70 +1,124 @@
-# Book Management API — FastAPI + Raw MySQL
+# Book Management API - FastAPI + Raw MySQL
 
-This version replaces **SQLite + SQLAlchemy ORM** with a direct MySQL connection:
+Book Management API is a FastAPI service that talks directly to MySQL with parameterized raw SQL. It does not use an ORM.
+
+## Overview
+
+- Register and authenticate users with JWT
+- Protect all book routes with Bearer token auth
+- Restrict create, update, patch, and delete actions to `admin` users
+- Filter books by author and sort by `published_year`
+- Initialize the database and tables on startup
+
+## Tech Stack
+
+- FastAPI
+- MySQL
+- `mysql-connector-python`
+- `PyJWT`
+- `pwdlib`
+- Pydantic v2
+
+## Project Structure
 
 ```text
-Postman -> FastAPI -> mysql-connector-python -> Raw SQL -> MySQL
+app/
+  auth.py
+  database.py
+  main.py
+  schemas.py
+setup.sql
+requirements.txt
+Book_Management_API_MySQL.postman_collection.json
+postman/
 ```
 
-Every database action uses raw, parameterized SQL through `cursor.execute()`.
+## Requirements
 
-## 1. Create the environment
+- Python 3.10+
+- MySQL server running locally or remotely
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and set your values:
+
+```env
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_mysql_password
+MYSQL_DATABASE=books_management
+SECRET_KEY=replace-with-a-long-random-secret
+```
+
+## Setup
 
 ```bash
 python -m venv venv
-```
-
-Windows:
-
-```bash
 venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
 ```
 
-Linux/macOS:
+Edit `.env` before starting the app.
 
-```bash
-source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-```
+If your MySQL user cannot create databases automatically, run `setup.sql` once in MySQL Workbench or another MySQL client.
 
-Edit `.env` and enter your MySQL username and password. The MySQL server must be running. The API creates the configured database and its tables automatically. If your MySQL user cannot create databases, run `setup.sql` once in MySQL Workbench.
-
-## 2. Run the API
+## Run
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
 - API: `http://127.0.0.1:8000`
-- Swagger: `http://127.0.0.1:8000/docs`
+- Swagger UI: `http://127.0.0.1:8000/docs`
 
-## Endpoints
+## Authentication Flow
 
-| Method | Endpoint | Raw SQL operation |
-|---|---|---|
-| POST | `/auth/register` | INSERT user |
-| POST | `/auth/login` | SELECT user |
-| GET | `/auth/me` | SELECT user |
-| GET | `/books` | SELECT books |
-| GET | `/books/{id}` | SELECT one book |
-| POST | `/books` | INSERT book |
-| PUT | `/books/{id}` | UPDATE all book fields |
-| PATCH | `/books/{id}` | UPDATE supplied fields only |
-| DELETE | `/books/{id}` | DELETE book |
+1. Register a user with `POST /auth/register`.
+2. Log in with `POST /auth/login`.
+3. Copy the returned token into the `Authorize` button in Swagger, or send it as:
 
-All book endpoints require a Bearer token. Creating, changing, or deleting a book requires an `admin` account.
+```http
+Authorization: Bearer <token>
+```
 
-## Quick test order
+## API Endpoints
 
-1. Register with role `admin` using `POST /auth/register`.
-2. Log in at `POST /auth/login` using form-data.
-3. Copy the returned token into Swagger's **Authorize** button or use `Authorization: Bearer <token>` in Postman.
-4. Test the book endpoints.
+| Method | Endpoint | Auth | Role | Description |
+|---|---|---|---|---|
+| GET | `/` | No | - | Health message |
+| POST | `/auth/register` | No | - | Create a user |
+| POST | `/auth/login` | No | - | Return JWT token |
+| GET | `/auth/me` | Yes | Any | Return current user |
+| GET | `/books` | Yes | Any | List books |
+| GET | `/books/{book_id}` | Yes | Any | Get one book |
+| POST | `/books` | Yes | Admin | Create a book |
+| PUT | `/books/{book_id}` | Yes | Admin | Replace all book fields |
+| PATCH | `/books/{book_id}` | Yes | Admin | Update selected book fields |
+| DELETE | `/books/{book_id}` | Yes | Admin | Delete a book |
 
-Example book body:
+## Query Parameters
+
+`GET /books` supports:
+
+- `author`: filter books by author name
+- `sort_by=published_year`: sort by year
+- `order=asc|desc`: choose sort order when sorting by year
+
+## Example Requests
+
+### Register
+
+```json
+{
+  "username": "admin",
+  "password": "admin123",
+  "role": "admin"
+}
+```
+
+### Create Book
 
 ```json
 {
@@ -74,10 +128,26 @@ Example book body:
 }
 ```
 
-Example PATCH body:
+### Patch Book
 
 ```json
 {
   "title": "Clean Code - Updated"
 }
 ```
+
+## Database Notes
+
+- The app creates the configured database and tables on startup.
+- Tables:
+  - `users`
+  - `books`
+- If startup creation fails, use `setup.sql` manually.
+
+## Postman
+
+The repository includes a Postman collection:
+
+- `Book_Management_API_MySQL.postman_collection.json`
+
+Import it into Postman and set the Bearer token after login.
