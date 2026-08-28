@@ -60,6 +60,99 @@ class BookResponse(BookFields):
     id: int
 
 
+class SchoolFields(BaseModel):
+    name: str = Field(min_length=1, max_length=150)
+    address: str | None = Field(default=None, max_length=255)
+    principal_name: str | None = Field(default=None, max_length=120)
+
+    @field_validator("name", "address", "principal_name")
+    @classmethod
+    def strip_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be empty")
+        return value
+
+
+class SchoolCreate(SchoolFields):
+    pass
+
+
+class SchoolUpdate(SchoolFields):
+    pass
+
+
+class SchoolPatch(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=150)
+    address: str | None = Field(default=None, max_length=255)
+    principal_name: str | None = Field(default=None, max_length=120)
+
+    @field_validator("name", "address", "principal_name")
+    @classmethod
+    def strip_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be empty")
+        return value
+
+
+class SchoolResponse(SchoolFields):
+    id: int
+
+
+class SchoolClassFields(BaseModel):
+    school_id: int = Field(gt=0)
+    grade_level: str = Field(min_length=1, max_length=50)
+    section: str = Field(min_length=1, max_length=20)
+    room_number: str | None = Field(default=None, max_length=20)
+    capacity: int = Field(gt=0, le=200)
+
+    @field_validator("grade_level", "section", "room_number")
+    @classmethod
+    def strip_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be empty")
+        return value
+
+
+class SchoolClassCreate(SchoolClassFields):
+    pass
+
+
+class SchoolClassUpdate(SchoolClassFields):
+    pass
+
+
+class SchoolClassPatch(BaseModel):
+    school_id: int | None = Field(default=None, gt=0)
+    grade_level: str | None = Field(default=None, min_length=1, max_length=50)
+    section: str | None = Field(default=None, min_length=1, max_length=20)
+    room_number: str | None = Field(default=None, max_length=20)
+    capacity: int | None = Field(default=None, gt=0, le=200)
+
+    @field_validator("grade_level", "section", "room_number")
+    @classmethod
+    def strip_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be empty")
+        return value
+
+
+class SchoolClassResponse(SchoolClassFields):
+    id: int
+    school_name: str
+
+
 class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     password: str = Field(min_length=6, max_length=128)

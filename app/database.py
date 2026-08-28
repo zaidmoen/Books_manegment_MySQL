@@ -75,6 +75,36 @@ def initialize_database() -> None:
             ) ENGINE=InnoDB
             """
         )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS schools (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(150) NOT NULL UNIQUE,
+                address VARCHAR(255) NULL,
+                principal_name VARCHAR(120) NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS classes (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                school_id INT UNSIGNED NOT NULL,
+                grade_level VARCHAR(50) NOT NULL,
+                section VARCHAR(20) NOT NULL,
+                room_number VARCHAR(20) NULL,
+                capacity INT UNSIGNED NOT NULL DEFAULT 30,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_classes_school
+                    FOREIGN KEY (school_id) REFERENCES schools(id)
+                    ON DELETE CASCADE,
+                UNIQUE KEY uq_classes_school_grade_section (school_id, grade_level, section),
+                INDEX idx_classes_school_id (school_id),
+                INDEX idx_classes_grade_level (grade_level)
+            ) ENGINE=InnoDB
+            """
+        )
         cursor.close()
         connection.commit()
     finally:
