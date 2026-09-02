@@ -1,6 +1,7 @@
 import os
 import re
 from contextlib import contextmanager
+from pathlib import Path
 
 import mysql.connector
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
 MYSQL_USER = os.getenv("MYSQL_USER", "root")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "books_management")
+MIGRATIONS_DIRECTORY = Path(__file__).resolve().parent.parent / "migrations"
 
 if not re.fullmatch(r"[A-Za-z0-9_]+", MYSQL_DATABASE):
     raise RuntimeError("MYSQL_DATABASE may contain only letters, numbers, and underscores")
@@ -105,10 +107,47 @@ def initialize_database() -> None:
             ) ENGINE=InnoDB
             """
         )
+        _apply_migrations(connection, cursor)
         cursor.close()
         connection.commit()
     finally:
         connection.close()
+
+
+def _apply_migrations(connection, cursor) -> None:
+    """Apply each SQL migration exactly once in filename order."""
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version VARCHAR(255) PRIMARY KEY,
+            applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB
+        """
+    )
+    connection.commit()
+
+    if not MIGRATIONS_DIRECTORY.exists():
+        return
+
+    for migration_path in sorted(MIGRATIONS_DIRECTORY.glob("*.sql")):
+        version = migration_path.name
+        cursor.execute(
+            "SELECT 1 FROM schema_migrations WHERE version = %s",
+            (version,),
+        )
+        if cursor.fetchone() is not None:
+            continue
+
+        try:
+            cursor.execute(migration_path.read_text(encoding="utf-8"))
+            cursor.execute(
+                "INSERT INTO schema_migrations (version) VALUES (%s)",
+                (version,),
+            )
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
 
 
 def get_db():
