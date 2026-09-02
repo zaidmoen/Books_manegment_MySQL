@@ -27,6 +27,7 @@ from .schemas import (
     SchoolCreate,
     SchoolPatch,
     SchoolResponse,
+    SchoolUpdate,
     Token,
     UserCreate,
     UserResponse,
