@@ -60,6 +60,26 @@ class BookResponse(BookFields):
     id: int
 
 
+class ReviewCreate(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    comment: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("comment")
+    @classmethod
+    def strip_comment(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("comment must not be empty")
+        return value
+
+
+class ReviewResponse(ReviewCreate):
+    id: int
+    user_id: int
+    book_id: int
+    created_at: datetime
+
+
 class SchoolFields(BaseModel):
     name: str = Field(min_length=1, max_length=150)
     address: str | None = Field(default=None, max_length=255)
