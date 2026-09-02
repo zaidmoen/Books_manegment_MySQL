@@ -18,6 +18,8 @@ from .schemas import (
     BookPatch,
     BookResponse,
     BookUpdate,
+    ReviewCreate,
+    ReviewResponse,
     SchoolClassCreate,
     SchoolClassPatch,
     SchoolClassResponse,
@@ -25,6 +27,7 @@ from .schemas import (
     SchoolCreate,
     SchoolPatch,
     SchoolResponse,
+    SchoolUpdate,
     Token,
     UserCreate,
     UserResponse,
@@ -59,6 +62,19 @@ def require_book(connection, book_id: int) -> dict:
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
     return book
+
+
+def fetch_review(connection, review_id: int) -> dict | None:
+    with dictionary_cursor(connection) as cursor:
+        cursor.execute(
+            """
+            SELECT id, user_id, book_id, rating, comment, created_at
+            FROM reviews
+            WHERE id = %s
+            """,
+            (review_id,),
+        )
+        return cursor.fetchone()
 
 
 def fetch_school(connection, school_id: int) -> dict | None:
@@ -269,6 +285,59 @@ def delete_book(
         cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
     connection.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.post(
+    "/books/{book_id}/reviews/",
+    response_model=ReviewResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_review(
+    payload: ReviewCreate,
+    book_id: int = Path(gt=0),
+    connection=Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    require_book(connection, book_id)
+    try:
+        with dictionary_cursor(connection) as cursor:
+            cursor.execute(
+                """
+                INSERT INTO reviews (user_id, book_id, rating, comment)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (current_user["id"], book_id, payload.rating, payload.comment),
+            )
+            review_id = cursor.lastrowid
+        connection.commit()
+    except IntegrityError as exc:
+        connection.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already reviewed this book",
+        ) from exc
+
+    return fetch_review(connection, review_id)
+
+
+@app.get("/books/{book_id}/reviews/", response_model=list[ReviewResponse])
+def get_book_reviews(
+    book_id: int = Path(gt=0),
+    connection=Depends(get_db),
+    _current_user: dict = Depends(get_current_user),
+):
+    require_book(connection, book_id)
+    with dictionary_cursor(connection) as cursor:
+        cursor.execute(
+            """
+            SELECT id, user_id, book_id, rating, comment, created_at
+            FROM reviews
+            WHERE book_id = %s
+            ORDER BY created_at DESC, id DESC
+            """,
+            (book_id,),
+        )
+        return cursor.fetchall()
 
 
 @app.get("/schools", response_model=list[SchoolResponse])

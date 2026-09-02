@@ -7,7 +7,8 @@
   "variable": [
     {"key": "base_url", "value": "http://127.0.0.1:8000"},
     {"key": "admin_token", "value": ""},
-    {"key": "book_id", "value": "1"}
+    {"key": "book_id", "value": "1"},
+    {"key": "review_id", "value": "1"}
   ],
   "item": [
     {
@@ -59,6 +60,17 @@
         "url": "{{base_url}}/books/{{book_id}}"
       }
     },
-    {"name": "08 Delete Book", "request": {"method": "DELETE", "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}], "url": "{{base_url}}/books/{{book_id}}"}}
+    {
+      "name": "08 Create Review",
+      "event": [{"listen": "test", "script": {"exec": ["const data = pm.response.json();", "pm.collectionVariables.set('review_id', data.id);"]}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{admin_token}}"}],
+        "body": {"mode": "raw", "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Excellent book\"\n}", "options": {"raw": {"language": "json"}}},
+        "url": "{{base_url}}/books/{{book_id}}/reviews/"
+      }
+    },
+    {"name": "09 Get Book Reviews", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}], "url": "{{base_url}}/books/{{book_id}}/reviews/"}},
+    {"name": "10 Delete Book", "request": {"method": "DELETE", "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}], "url": "{{base_url}}/books/{{book_id}}"}}
   ]
 }

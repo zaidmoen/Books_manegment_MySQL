@@ -1,6 +1,6 @@
 # School, Class, and Book Management API
 
-FastAPI + raw MySQL backend for managing schools, classes, and books with JWT authentication and role-based access control.
+FastAPI + raw MySQL backend for managing schools, classes, books, and book reviews with JWT authentication and role-based access control.
 
 ## Snapshot
 
@@ -21,6 +21,8 @@ FastAPI + raw MySQL backend for managing schools, classes, and books with JWT au
 - School records with address and principal data
 - Class records linked to schools
 - Book records with filtering and sorting
+- One review per user and book, with ratings from 1 to 5
+- Versioned SQL migrations, including data backfills
 - Direct SQL with parameterized queries, no ORM
 
 ## Data Model
@@ -31,6 +33,8 @@ FastAPI + raw MySQL backend for managing schools, classes, and books with JWT au
 | `schools` | School master data |
 | `classes` | Classes linked to a school |
 | `books` | Book catalog |
+| `reviews` | Ratings and comments linked to users and books |
+| `schema_migrations` | Applied SQL migration versions |
 
 ## Project Layout
 
@@ -40,6 +44,9 @@ app/
   database.py
   main.py
   schemas.py
+migrations/
+  001_create_reviews_table.sql
+  002_seed_existing_book_reviews.sql
 setup.sql
 requirements.txt
 Book_Management_API_MySQL.postman_collection.json
@@ -132,6 +139,13 @@ Authorization: Bearer <token>
 | PATCH | `/books/{book_id}` | Yes | Admin | Update selected book fields |
 | DELETE | `/books/{book_id}` | Yes | Admin | Delete a book |
 
+### Reviews
+
+| Method | Endpoint | Auth | Role | Description |
+|---|---|---|---|---|
+| POST | `/books/{book_id}/reviews/` | Yes | Any | Review a book once |
+| GET | `/books/{book_id}/reviews/` | Yes | Any | List reviews for a book |
+
 ## Query Parameters
 
 `GET /books`
@@ -189,14 +203,27 @@ Authorization: Bearer <token>
 }
 ```
 
+### Create Review
+
+```json
+{
+  "rating": 5,
+  "comment": "Excellent book"
+}
+```
+
 ## Database Notes
 
-- The app creates the database and tables on startup.
+- The app creates the core database tables and applies pending files from `migrations/` on startup.
+- `002_seed_existing_book_reviews.sql` gives every existing book a default rating of `5`, using the oldest existing user. It safely inserts nothing when no user exists and never duplicates a user/book review.
 - Tables:
   - `users`
   - `schools`
   - `classes`
   - `books`
+  - `reviews`
+- `reviews.user_id` and `reviews.book_id` use foreign keys with cascade delete.
+- `(user_id, book_id)` is unique, so one user cannot review the same book twice.
 - `classes.school_id` is linked to `schools.id` with cascade delete.
 
 ## Postman
