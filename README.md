@@ -24,6 +24,7 @@ FastAPI + raw MySQL backend for managing schools, classes, books, and book revie
 - One review per user and book, with ratings from 1 to 5
 - Versioned SQL migrations, including data backfills
 - Direct SQL with parameterized queries, no ORM
+- Public registration always creates a regular user account
 
 ## Data Model
 
@@ -63,7 +64,14 @@ MYSQL_PORT=3306
 MYSQL_USER=root
 MYSQL_PASSWORD=your_mysql_password
 MYSQL_DATABASE=books_management
-SECRET_KEY=replace-with-a-long-random-secret
+SECRET_KEY=replace-this-with-at-least-32-random-characters
+```
+
+`SECRET_KEY` is required and must contain at least 32 characters. A quick local
+value can be generated with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
 ## Setup
@@ -165,11 +173,14 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "username": "admin",
-  "password": "admin123",
-  "role": "admin"
+  "username": "student",
+  "password": "strong-password"
 }
 ```
+
+New accounts are always created with the `user` role. Admin access should be
+granted directly in the database by someone who already manages the system;
+it cannot be requested through the public registration endpoint.
 
 ### Create School
 
@@ -233,3 +244,41 @@ The repository includes a Postman collection:
 - `Book_Management_API_MySQL.postman_collection.json`
 
 Import it into Postman, authenticate once, and reuse the Bearer token for the protected routes.
+
+## Tests
+
+Install the development requirements and run the test suite:
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+GitHub Actions runs the same tests on every push and pull request.
+
+## Security and Code Review Report
+
+This section records the main findings from a small security and code-quality
+review of the project.
+
+### Fixed in this update
+
+| Finding | Why it mattered | Change |
+|---|---|---|
+| A client could submit `role: admin` during registration | Anyone could give their own account admin permissions | Registration now rejects unknown fields and always stores the `user` role |
+| JWT had a predictable fallback secret | Tokens could be forged when the environment variable was missing | The app now requires a secret of at least 32 characters |
+| The role was copied into the JWT | A token could contain an old role after database permissions changed | Authorization continues to use the current role loaded from MySQL |
+| Authentication rules had no automated tests | A later edit could bring the same issue back | Added focused tests and a GitHub Actions workflow |
+| The registration example showed an admin account | The documentation encouraged an unsafe flow | Replaced it with a regular-user example and documented admin provisioning |
+
+### Current limitations
+
+- The tests cover the security-sensitive registration and token rules. Full API
+  integration tests still require a temporary MySQL database.
+- Admin provisioning is intentionally kept outside the public API. A future
+  version could add a protected command-line script for this task.
+- The API uses synchronous MySQL connections. This is reasonable for this
+  learning project, but connection pooling would be useful before heavier use.
+
+The goal of these changes is to keep the project understandable while making
+its authentication boundary safer and easier to maintain.
