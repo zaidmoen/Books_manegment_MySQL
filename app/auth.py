@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import jwt
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
@@ -9,12 +10,21 @@ from pwdlib import PasswordHash
 
 from .database import dictionary_cursor, get_db
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key-before-production")
+load_dotenv()
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 password_hash = PasswordHash.recommended()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+
+def get_secret_key() -> str:
+    """Return the JWT secret and fail clearly when it is not configured."""
+    secret_key = os.getenv("SECRET_KEY", "").strip()
+    if len(secret_key) < 32:
+        raise RuntimeError("SECRET_KEY must contain at least 32 characters")
+    return secret_key
 
 
 def hash_password(password: str) -> str:
@@ -46,7 +56,7 @@ def authenticate_user(connection, username: str, password: str) -> dict | None:
 
 
 def create_access_token(
-    *, subject: str, role: str, expires_delta: timedelta | None = None
+    *, subject: str, expires_delta: timedelta | None = None
 ) -> str:
     expire = datetime.now(timezone.utc) + (
         expires_delta
@@ -54,8 +64,8 @@ def create_access_token(
         else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     return jwt.encode(
-        {"sub": subject, "role": role, "exp": expire},
-        SECRET_KEY,
+        {"sub": subject, "exp": expire},
+        get_secret_key(),
         algorithm=ALGORITHM,
     )
 
@@ -70,7 +80,7 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, get_secret_key(), algorithms=[ALGORITHM])
         username = payload.get("sub")
         if not isinstance(username, str) or not username:
             raise credentials_exception

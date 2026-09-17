@@ -9,6 +9,7 @@ from .auth import (
     authenticate_user,
     create_access_token,
     get_current_user,
+    get_secret_key,
     hash_password,
     require_admin,
 )
@@ -36,6 +37,7 @@ from .schemas import (
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    get_secret_key()
     initialize_database()
     yield
 
@@ -139,14 +141,14 @@ def register_user(payload: UserCreate, connection=Depends(get_db)):
                 INSERT INTO users (username, hashed_password, role)
                 VALUES (%s, %s, %s)
                 """,
-                (payload.username, hash_password(payload.password), payload.role),
+                (payload.username, hash_password(payload.password), "user"),
             )
             user_id = cursor.lastrowid
         connection.commit()
     except IntegrityError as exc:
         connection.rollback()
         raise HTTPException(status_code=409, detail="Username already exists") from exc
-    return {"id": user_id, "username": payload.username, "role": payload.role}
+    return {"id": user_id, "username": payload.username, "role": "user"}
 
 
 @app.post("/auth/login", response_model=Token)
@@ -162,9 +164,7 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return {
-        "access_token": create_access_token(
-            subject=user["username"], role=user["role"]
-        ),
+        "access_token": create_access_token(subject=user["username"]),
         "token_type": "bearer",
     }
 

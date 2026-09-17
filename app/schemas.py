@@ -1,7 +1,5 @@
 from datetime import datetime
-from typing import Literal
-
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BookFields(BaseModel):
@@ -174,9 +172,10 @@ class SchoolClassResponse(SchoolClassFields):
 
 
 class UserCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     username: str = Field(min_length=3, max_length=50)
-    password: str = Field(min_length=6, max_length=128)
-    role: Literal["user", "admin"] = "user"
+    password: str = Field(min_length=8, max_length=128)
 
     @field_validator("username")
     @classmethod
