@@ -251,7 +251,7 @@ Install the development requirements and run the test suite:
 
 ```bash
 pip install -r requirements-dev.txt
-pytest -q
+python -m pytest -q
 ```
 
 GitHub Actions runs the same tests on every push and pull request.
